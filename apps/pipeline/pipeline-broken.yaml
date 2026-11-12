@@ -1,0 +1,37 @@
+# E3: pipeline com dois defeitos propositais (corrigir sem recriar o projeto):
+#  1) runAfter referencia uma task que nao existe  -> rejeitado ja no oc apply/create (webhook de validacao)
+#  2) workspace da task declarado com outro nome   -> PipelineRun falha em validacao ("workspace ... not declared")
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: broken-ci
+  labels: {ex288-lab: v3}
+spec:
+  workspaces:
+    - name: shared
+  tasks:
+    - name: write
+      workspaces:
+        - {name: data, workspace: shared}
+      taskSpec:
+        workspaces:
+          - name: data
+        steps:
+          - name: w
+            image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+            script: |
+              #!/bin/sh
+              echo "ok" > $(workspaces.data.path)/result.txt
+    - name: read
+      runAfter: ["writ"]
+      workspaces:
+        - {name: data, workspace: shared}
+      taskSpec:
+        workspaces:
+          - name: dados
+        steps:
+          - name: r
+            image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+            script: |
+              #!/bin/sh
+              cat $(workspaces.dados.path)/result.txt

@@ -1,0 +1,7 @@
+{
+  "name": "webapp-s2i",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": { "start": "node server.js", "test": "node -e \"console.log('TESTS PASSED')\"" },
+  "dependencies": { "ms": "2.1.3" }
+}

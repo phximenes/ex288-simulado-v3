@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ex288-hello
+description: Chart de exemplo do lab EX288 v3 (Deployment, Service, Route)
+type: application
+version: 0.1.0
+appVersion: "1.0"

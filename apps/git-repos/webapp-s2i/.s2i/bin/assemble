@@ -1,0 +1,9 @@
+#!/bin/bash
+# assemble customizado: chama o original e registra informacao de build (nao troque a ordem: o npm install roda no original)
+echo "---> EX288 custom assemble"
+/usr/libexec/s2i/assemble
+rc=$?
+if [ $rc -eq 0 ]; then
+  echo "built-at=$(date -u +%FT%TZ) registry=$(npm config get registry)" > build-info.txt
+fi
+exit $rc

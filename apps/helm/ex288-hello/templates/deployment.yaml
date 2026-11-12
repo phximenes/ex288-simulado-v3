@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ex288-hello.name" . }}
+  labels:
+    app: {{ include "ex288-hello.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "ex288-hello.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "ex288-hello.name" . }}
+    spec:
+      containers:
+        - name: app
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          env:
+            - name: MESSAGE
+              value: {{ .Values.message | quote }}
+          command: ["node", "-e"]
+          args:
+            - "require('http').createServer((q,s)=>s.end(process.env.MESSAGE+'\\n')).listen(8080)"
+          ports:
+            - containerPort: 8080

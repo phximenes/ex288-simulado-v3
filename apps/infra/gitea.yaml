@@ -1,0 +1,70 @@
+# Gitea (rootless) - Git interno do lab v3. Licenca MIT. SCC restricted-v2, porta 3000, SQLite em emptyDir.
+# Sem requests/limits de proposito (BestEffort): o CRC padrao ja tem ~93% da memoria requisitada.
+# emptyDir (e nao PVC): nao depende do driver CSI hostpath do CRC (que cai quando o no entra em DiskPressure).
+# Os dados somem se o pod reiniciar: rode scripts/infra-up.sh de novo (recria usuario e repositorios; idempotente).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea
+  labels: {app: gitea, ex288-lab: v3}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: gitea}
+  template:
+    metadata:
+      labels: {app: gitea}
+    spec:
+      containers:
+        - name: gitea
+          image: docker.io/gitea/gitea:1.27.3-rootless
+          command:
+            - /bin/sh
+            - -c
+            - export GITEA____RUN_USER="$(id -u)"; exec /usr/bin/dumb-init -- /usr/local/bin/docker-entrypoint.sh
+          ports:
+            - containerPort: 3000
+          env:
+            - {name: HOME, value: /var/lib/gitea/home}
+            - {name: GITEA__security__INSTALL_LOCK, value: "true"}
+            - {name: GITEA__database__DB_TYPE, value: sqlite3}
+            - {name: GITEA__server__HTTP_PORT, value: "3000"}
+            - {name: GITEA__server__DISABLE_SSH, value: "true"}
+            - {name: GITEA__service__DISABLE_REGISTRATION, value: "true"}
+            - {name: GITEA__service__REQUIRE_SIGNIN_VIEW, value: "true"}
+            - {name: GITEA__repository__DEFAULT_BRANCH, value: main}
+            - {name: GITEA__security__ALLOWED_HOST_LIST, value: "*"}
+            - {name: GITEA__log__LEVEL, value: Warn}
+          readinessProbe:
+            httpGet: {path: /api/healthz, port: 3000}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources: {}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/gitea}
+            - {name: conf, mountPath: /etc/gitea}
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: conf
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea
+  labels: {app: gitea, ex288-lab: v3}
+spec:
+  selector: {app: gitea}
+  ports:
+    - {name: http, port: 3000, targetPort: 3000}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: gitea
+  labels: {app: gitea, ex288-lab: v3}
+spec:
+  to: {kind: Service, name: gitea}
+  port: {targetPort: http}

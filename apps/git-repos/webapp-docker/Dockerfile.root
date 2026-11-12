@@ -1,0 +1,9 @@
+# Versao "ruim para OpenShift": diretorio so do root e porta de usuario nao usada. Veja 02-deploy-from-dockerfile.
+FROM registry.access.redhat.com/ubi9/nodejs-22-minimal:latest
+USER 0
+WORKDIR /app
+COPY package.json server.js ./
+RUN mkdir -p /app/data && npm install --omit=dev
+ENV DATA_DIR=/app/data
+EXPOSE 8080
+CMD ["node", "server.js"]

@@ -1,0 +1,19 @@
+# Argo CD de laboratorio, restrito a UM projeto (ex288-v3-gitops). Quem aplica e o developer (sem cluster-admin):
+# o Operator reconcilia ArgoCD em qualquer namespace (modo AllNamespaces) e o developer pode criar este recurso no proprio projeto
+# (VERIFICADO: oc auth can-i create argocds.argoproj.io). Instancia com escopo de namespace: so implanta no proprio projeto.
+# Requests/limits baixos de proposito (o CRC ja usa ~80% da RAM com Gitea, Nexus, Pipelines e a instancia padrao do GitOps).
+# Login: usuario 'admin', senha no Secret lab-cluster (chave admin.password). Sem SSO/Dex.
+apiVersion: argoproj.io/v1beta1
+kind: ArgoCD
+metadata:
+  name: lab
+spec:
+  server:
+    route: {enabled: true}
+    resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {cpu: 500m, memory: 256Mi}}
+  controller:
+    resources: {requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 1Gi}}
+  repo:
+    resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {cpu: 500m, memory: 512Mi}}
+  redis:
+    resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 250m, memory: 128Mi}}

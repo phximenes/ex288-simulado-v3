@@ -1,0 +1,62 @@
+# E2: git-clone (Git interno privado) -> buildah (Dockerfile) -> openshift-client (deploy).
+# As Tasks vem do namespace openshift-pipelines pelo cluster resolver (ClusterTask foi descontinuado).
+# ATENCAO: confira os nomes dos parametros na SUA versao: oc get task buildah -n openshift-pipelines -o jsonpath='{.spec.params[*].name}'
+# (TLS_VERIFY x TLSVERIFY varia entre versoes). Status: VALIDADO NO CLUSTER (OpenShift Pipelines 1.24.3).
+# IMAGE deve apontar para o PROJETO onde o pipeline roda (image-registry...:5000/<projeto>/<imagem>:<tag>); outro namespace = "authentication required".
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: build-and-deploy
+  labels: {ex288-lab: v3}
+spec:
+  params:
+    - {name: GIT_URL, type: string}
+    - {name: GIT_REVISION, type: string, default: main}
+    - {name: IMAGE, type: string}
+    - {name: APP_NAME, type: string, default: ci-app}
+  workspaces:
+    - name: shared
+  tasks:
+    - name: fetch
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: git-clone}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: URL, value: "$(params.GIT_URL)"}
+        - {name: REVISION, value: "$(params.GIT_REVISION)"}
+        - {name: DELETE_EXISTING, value: "true"}
+      workspaces:
+        - {name: output, workspace: shared}
+    - name: build
+      runAfter: ["fetch"]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: buildah}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - {name: IMAGE, value: "$(params.IMAGE)"}
+        - {name: DOCKERFILE, value: ./Dockerfile}
+        - {name: TLS_VERIFY, value: "false"}
+      workspaces:
+        - {name: source, workspace: shared}
+    - name: deploy
+      runAfter: ["build"]
+      taskRef:
+        resolver: cluster
+        params:
+          - {name: kind, value: task}
+          - {name: name, value: openshift-client}
+          - {name: namespace, value: openshift-pipelines}
+      params:
+        - name: SCRIPT
+          value: |
+            oc get deployment/$(params.APP_NAME) >/dev/null 2>&1 || oc create deployment $(params.APP_NAME) --image=$(params.IMAGE) --port=8080
+            oc set image deployment/$(params.APP_NAME) '*=$(params.IMAGE)'
+            oc get svc/$(params.APP_NAME) >/dev/null 2>&1 || oc expose deployment/$(params.APP_NAME) --port=8080
+            oc get route/$(params.APP_NAME) >/dev/null 2>&1 || oc expose svc/$(params.APP_NAME)
+            oc rollout status deployment/$(params.APP_NAME) --timeout=180s

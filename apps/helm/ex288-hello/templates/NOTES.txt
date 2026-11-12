@@ -1,0 +1,1 @@
+Release {{ .Release.Name }} instalada. Rota: oc get route {{ include "ex288-hello.name" . }}

@@ -1,0 +1,7 @@
+replicaCount: 1
+message: "hello from helm"
+image:
+  repository: registry.access.redhat.com/ubi9/nodejs-22-minimal
+  tag: latest
+route:
+  enabled: true

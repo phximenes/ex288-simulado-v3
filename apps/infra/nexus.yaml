@@ -1,0 +1,58 @@
+# Nexus Repository (imagem oficial sonatype/nexus3, edicao Community; limites de uso da edicao: NAO VERIFICADO).
+# Heap reduzido para caber no CRC padrao. BestEffort (sem requests/limits) e emptyDir: os dados somem se o pod
+# reiniciar; rode scripts/infra-up.sh de novo (idempotente) para recriar repositorios e conteudo.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus
+  labels: {app: nexus, ex288-lab: v3}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: nexus}
+  template:
+    metadata:
+      labels: {app: nexus}
+    spec:
+      containers:
+        - name: nexus
+          image: docker.io/sonatype/nexus3:3.96.5-ubi
+          env:
+            - name: INSTALL4J_ADD_VM_PARAMS
+              value: "-Xms512m -Xmx768m -XX:MaxDirectMemorySize=512m -Djava.util.prefs.userRoot=/nexus-data/javaprefs"
+            - {name: NEXUS_SECURITY_RANDOMPASSWORD, value: "false"}
+          ports:
+            - {name: http, containerPort: 8081}
+            - {name: docker, containerPort: 5000}
+          readinessProbe:
+            httpGet: {path: /service/rest/v1/status, port: 8081}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 60
+          resources: {}
+          volumeMounts:
+            - {name: data, mountPath: /nexus-data}
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus
+  labels: {app: nexus, ex288-lab: v3}
+spec:
+  selector: {app: nexus}
+  ports:
+    - {name: http, port: 8081, targetPort: 8081}
+    - {name: docker, port: 5000, targetPort: 5000}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: nexus
+  labels: {app: nexus, ex288-lab: v3}
+spec:
+  to: {kind: Service, name: nexus}
+  port: {targetPort: http}

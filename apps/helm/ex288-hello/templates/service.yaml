@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ex288-hello.name" . }}
+spec:
+  selector:
+    app: {{ include "ex288-hello.name" . }}
+  ports:
+    - port: 8080
+      targetPort: 8080

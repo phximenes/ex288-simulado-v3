@@ -1,0 +1,29 @@
+# E1: mini-pipeline com duas tasks encadeadas por runAfter e taskSpec embutido (sem depender das Tasks do Operator).
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: mini-ci
+  labels: {ex288-lab: v3}
+spec:
+  params:
+    - {name: MESSAGE, type: string, default: "hello"}
+  tasks:
+    - name: prepare
+      taskSpec:
+        steps:
+          - name: say
+            image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+            script: |
+              #!/bin/sh
+              echo "prepare: $(params.MESSAGE)"
+      params:
+        - {name: MESSAGE, value: "$(params.MESSAGE)"}
+    - name: verify
+      runAfter: ["prepare"]
+      taskSpec:
+        steps:
+          - name: say
+            image: registry.access.redhat.com/ubi9/ubi-minimal:latest
+            script: |
+              #!/bin/sh
+              echo "verify: ok"

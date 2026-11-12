@@ -1,0 +1,14 @@
+# Instala o Red Hat OpenShift Pipelines Operator (requer cluster-admin; cria recursos em openshift-operators).
+# Canal 'latest' = openshift-pipelines-operator-rh.v1.24.3 neste catalogo do CRC (VERIFICADO em 2026-10-31).
+# Modo de instalacao: AllNamespaces. Quem aplica e VOCE (o v3 nao instala Operators sozinho).
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-pipelines-operator-rh
+  namespace: openshift-operators
+spec:
+  channel: latest
+  name: openshift-pipelines-operator-rh
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic

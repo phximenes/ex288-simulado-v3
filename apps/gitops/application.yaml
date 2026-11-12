@@ -1,0 +1,19 @@
+# Application do Argo CD: sincroniza o repositorio privado gitops-demo (Gitea) com o proprio projeto ex288-v3-gitops.
+# O Application de uma instancia com escopo de namespace fica no namespace da instancia, e o destino e esse mesmo namespace.
+# O repositorio e acessado pelo Service interno do Gitea (nao depende de DNS de rota dentro do cluster); a credencial vem do
+# Secret 'gitea-repo' (veja o cookbook, receita R9).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitops-demo
+spec:
+  project: default
+  source:
+    repoURL: http://gitea.ex288-v3-infra.svc.cluster.local:3000/ex288/gitops-demo.git
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ex288-v3-gitops
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}

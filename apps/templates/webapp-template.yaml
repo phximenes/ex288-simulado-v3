@@ -1,0 +1,69 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: webapp-template
+  annotations:
+    description: "Web app Node.js simples com Secret de token, Service e Route (lab EX288 v3)"
+labels:
+  template: webapp-template
+  ex288-lab: v3
+parameters:
+  - name: NAME
+    description: Nome da instancia
+    required: true
+  - name: MESSAGE
+    description: Mensagem devolvida pela app
+    value: hello
+  - name: REPLICAS
+    description: Numero de replicas
+    value: "1"
+  - name: APP_TOKEN
+    description: Token gerado
+    generate: expression
+    from: "[a-zA-Z0-9]{16}"
+objects:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: ${NAME}-token
+    stringData:
+      token: ${APP_TOKEN}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: ${NAME}
+    spec:
+      replicas: ${{REPLICAS}}
+      selector:
+        matchLabels: {app: "${NAME}"}
+      template:
+        metadata:
+          labels: {app: "${NAME}"}
+        spec:
+          containers:
+            - name: app
+              image: registry.access.redhat.com/ubi9/nodejs-22-minimal:latest
+              env:
+                - {name: MESSAGE, value: "${MESSAGE}"}
+                - name: TOKEN
+                  valueFrom:
+                    secretKeyRef: {name: "${NAME}-token", key: token}
+              command: ["node", "-e"]
+              args:
+                - "require('http').createServer((q,s)=>s.end(process.env.MESSAGE+'\\n')).listen(8080)"
+              ports:
+                - containerPort: 8080
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: ${NAME}
+    spec:
+      selector: {app: "${NAME}"}
+      ports:
+        - {port: 8080, targetPort: 8080}
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: ${NAME}
+    spec:
+      to: {kind: Service, name: "${NAME}"}

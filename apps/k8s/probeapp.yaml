@@ -1,0 +1,50 @@
+# App com inicializacao lenta (T5): so escuta apos START_DELAY segundos; /healthz sempre 200; /ready 200 apos mais 5 s.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probeapp
+  labels: {app: probeapp, ex288-lab: v3}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: probeapp}
+  template:
+    metadata:
+      labels: {app: probeapp}
+    spec:
+      containers:
+        - name: probeapp
+          image: registry.access.redhat.com/ubi9/nodejs-22-minimal:latest
+          env:
+            - {name: START_DELAY, value: "25"}
+          command: ["node", "-e"]
+          args:
+            - |
+              setTimeout(() => {
+                const t0 = Date.now();
+                require('http').createServer((q, s) => {
+                  if (q.url === '/healthz') { s.writeHead(200); return s.end('ok\n'); }
+                  if (q.url === '/ready') { const ok = Date.now() - t0 > 5000; s.writeHead(ok ? 200 : 503); return s.end(ok ? 'ready\n' : 'warming\n'); }
+                  s.end('probeapp\n');
+                }).listen(8080);
+              }, (+process.env.START_DELAY || 20) * 1000);
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: probeapp
+  labels: {app: probeapp, ex288-lab: v3}
+spec:
+  selector: {app: probeapp}
+  ports:
+    - {port: 8080, targetPort: 8080}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: probeapp
+  labels: {app: probeapp, ex288-lab: v3}
+spec:
+  to: {kind: Service, name: probeapp}

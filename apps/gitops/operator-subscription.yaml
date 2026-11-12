@@ -1,0 +1,29 @@
+# Instala o Red Hat OpenShift GitOps Operator (requer cluster-admin). Quem aplica e VOCE (o v3 nao instala Operators sozinho).
+# Forma documentada pela Red Hat desde o GitOps 1.10 [OFICIAL]: namespace proprio + OperatorGroup (todos os namespaces) + Subscription.
+# Canal 'latest' = padrao, versao estavel mais recente [OFICIAL]. Neste cluster o CSV openshift-gitops-operator.v1.22.3 esta
+# Succeeded em modo AllNamespaces (VERIFICADO, leitura como developer). O canal exato da Subscription real NAO e legivel ao
+# developer (NAO VERIFICADO); confira com:  oc get packagemanifest openshift-gitops-operator -n openshift-marketplace -o jsonpath='{.status.defaultChannel}'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-gitops-operator
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-gitops-operator
+  namespace: openshift-gitops-operator
+spec:
+  upgradeStrategy: Default
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-gitops-operator
+  namespace: openshift-gitops-operator
+spec:
+  channel: latest
+  name: openshift-gitops-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  installPlanApproval: Automatic
